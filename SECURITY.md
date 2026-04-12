@@ -32,7 +32,7 @@ Out of scope:
 
 This repo runs:
 
-- **CodeQL** weekly and on every PR (`security-extended` query pack)
+- **CodeQL** via GitHub's default code-scanning setup (weekly + on every PR)
 - **Dependency Review** blocking high-severity dependency introductions on PRs
 - **Dependabot** for npm + GitHub Actions (security alerts on; grouped version PRs weekly)
 - **npm audit** in CI (fails on high/critical advisories)
