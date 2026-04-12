@@ -4,6 +4,10 @@ import {
   directNarrative,
   extractUITestPlanItems,
   formatArcForHuman,
+  isBackendOnly,
+  manifestationSurface,
+  planDataBeats,
+  rewriteRationale,
   scaffoldScenarioYaml,
 } from '../story-director.ts';
 
@@ -164,5 +168,146 @@ describe('scaffoldScenarioYaml', () => {
     const yaml = scaffoldScenarioYaml(arc, context);
     expect(yaml).toContain('/clients/abc-123/financials');
     expect(yaml).not.toContain('<id>');
+  });
+
+  it('expands a data-creation beat into navigate + type + click steps', () => {
+    const context = makeContext({
+      primaryArea: 'settings',
+      routes: ['/settings/partner-programs'],
+      changedFiles: ['web/src/app/(dashboard)/settings/partner-programs/new/page.tsx'],
+    });
+    const arc = directNarrative(context);
+    const yaml = scaffoldScenarioYaml(arc, context);
+
+    expect(yaml).toContain('/settings/partner-programs/new');
+    expect(yaml).toMatch(/- action: type\n\s+selector: "placeholder:Program name"/);
+    expect(yaml).toMatch(/text: "Shopify Partners"/);
+    expect(yaml).toMatch(/- action: click\n\s+selector: "button:Create program"/);
+  });
+});
+
+describe('planDataBeats', () => {
+  const sarah = {
+    name: 'Sarah',
+    role: 'Agency Account Manager',
+    motivation: 'tests',
+  };
+
+  it('returns a data-creation beat when the diff touches a known create flow', () => {
+    const context = makeContext({
+      changedFiles: ['web/src/app/(dashboard)/clients/new/page.tsx'],
+    });
+    const beats = planDataBeats(context, sarah);
+    expect(beats).toHaveLength(1);
+    expect(beats[0].sequence).toBe('data-creation');
+    expect(beats[0].dataFlow?.route).toBe('/clients/new');
+    expect(beats[0].rationale).toContain('Sarah');
+  });
+
+  it('caps at a single beat even when two flows match', () => {
+    const context = makeContext({
+      changedFiles: [
+        'web/src/app/(dashboard)/clients/new/page.tsx',
+        'web/src/app/(dashboard)/tasks/new/page.tsx',
+      ],
+    });
+    expect(planDataBeats(context, sarah)).toHaveLength(1);
+  });
+
+  it('returns no beats when nothing in the diff matches', () => {
+    const context = makeContext({
+      changedFiles: ['web/src/lib/unrelated.ts'],
+      routes: [],
+    });
+    expect(planDataBeats(context, sarah)).toHaveLength(0);
+  });
+});
+
+describe('isBackendOnly and manifestationSurface', () => {
+  it('flags PRs with no routes and no frontend files as backend-only', () => {
+    const context = makeContext({
+      routes: [],
+      changedFiles: ['web/src/lib/partner-detection.ts', 'supabase/migrations/0042_partner.sql'],
+    });
+    expect(isBackendOnly(context)).toBe(true);
+  });
+
+  it('does not flag PRs that touch a frontend component', () => {
+    const context = makeContext({
+      routes: [],
+      changedFiles: ['web/src/components/dashboard/pipeline-chart.tsx'],
+    });
+    expect(isBackendOnly(context)).toBe(false);
+  });
+
+  it('maps partner-detection backend changes to the financials surface', () => {
+    const context = makeContext({
+      routes: [],
+      changedFiles: ['web/src/lib/partner-detection.ts'],
+    });
+    expect(manifestationSurface(context)).toBe('/clients/<id>/financials');
+  });
+
+  it('falls back to the dashboard when nothing specific matches', () => {
+    const context = makeContext({
+      routes: [],
+      changedFiles: ['web/src/lib/obscure.ts'],
+    });
+    expect(manifestationSurface(context)).toBe('/dashboard');
+  });
+
+  it('synthesizes an arc anchored on the manifestation surface for backend-only PRs', () => {
+    const context = makeContext({
+      routes: [],
+      primaryArea: 'general',
+      changedFiles: ['web/src/lib/partner-detection.ts'],
+    });
+    const arc = directNarrative(context);
+    const surfaces = arc.action.map((b) => b.surface);
+    expect(surfaces).toContain('/clients/<id>/financials');
+  });
+});
+
+describe('rewriteRationale', () => {
+  const sarah = {
+    name: 'Sarah',
+    role: 'Agency Account Manager',
+    motivation: 'tests',
+  };
+
+  it('prefixes setup beats with persona-opens or persona-sees framing', () => {
+    const opens = rewriteRationale('Navigate to the financials tab', sarah, 'setup');
+    expect(opens).toContain('Sarah');
+    expect(opens.toLowerCase()).toContain('opens');
+    expect(opens.toLowerCase()).not.toContain('navigate to');
+
+    const sees = rewriteRationale('Dashboard shows the pipeline chart', sarah, 'setup');
+    expect(sees).toContain('Sarah');
+    expect(sees.toLowerCase()).toContain('sees');
+  });
+
+  it('prefixes payoff beats with "Now <persona> sees"', () => {
+    const result = rewriteRationale('Modal confirms the transition', sarah, 'payoff');
+    expect(result).toMatch(/^Now Sarah sees\b/);
+  });
+
+  it('prefixes close beats with "<persona> leaves knowing"', () => {
+    const result = rewriteRationale('The referral appears inline', sarah, 'close');
+    expect(result).toMatch(/^Sarah leaves knowing\b/);
+  });
+
+  it('reformats "After X, Y" into "Because X, Y"', () => {
+    const result = rewriteRationale(
+      'After contract_signed is set, the referral appears',
+      sarah,
+      'payoff'
+    );
+    expect(result).toMatch(/^Because contract_signed is set, the referral appears$/);
+  });
+
+  it('caps long rationales near 140 chars', () => {
+    const long = 'A'.repeat(200);
+    const result = rewriteRationale(long, sarah, 'action');
+    expect(result.length).toBeLessThanOrEqual(140);
   });
 });

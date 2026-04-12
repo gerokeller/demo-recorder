@@ -158,6 +158,47 @@ function parseLines(lines: string[], startLine: number, parentIndent: number): P
   return { value: result, nextLine: i };
 }
 
+/**
+ * Split a flow-collection body (`a, b, c` inside `[...]` or `{...}`) on
+ * commas while respecting quoted strings. Without this, a quoted value
+ * that happens to contain a comma (e.g., `"hooks, drawer, table"`) is torn
+ * into multiple entries and downstream zod validation explodes.
+ *
+ * Minimal state machine: track whether we're inside a single- or double-
+ * quoted string and honor backslash escapes in double-quoted strings so
+ * JSON-stringified values round-trip cleanly.
+ */
+function splitFlowCommas(inner: string): string[] {
+  const parts: string[] = [];
+  let buf = '';
+  let quote: '"' | "'" | null = null;
+  for (let i = 0; i < inner.length; i++) {
+    const ch = inner[i];
+    if (quote) {
+      buf += ch;
+      if (ch === '\\' && quote === '"' && i + 1 < inner.length) {
+        buf += inner[++i];
+        continue;
+      }
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      buf += ch;
+      continue;
+    }
+    if (ch === ',') {
+      parts.push(buf);
+      buf = '';
+      continue;
+    }
+    buf += ch;
+  }
+  if (buf.length > 0 || parts.length > 0) parts.push(buf);
+  return parts;
+}
+
 export function parseScalar(raw: string): unknown {
   const trimmed = raw.trim();
 
@@ -176,7 +217,7 @@ export function parseScalar(raw: string): unknown {
   if (commentFree.startsWith('{') && commentFree.endsWith('}')) {
     const inner = commentFree.slice(1, -1);
     const obj: Record<string, unknown> = {};
-    for (const part of inner.split(',')) {
+    for (const part of splitFlowCommas(inner)) {
       const kv = part.trim().match(/^(\w[\w-]*):\s*(.*)/);
       if (kv) {
         obj[kv[1]] = parseScalar(kv[2]);
@@ -188,7 +229,7 @@ export function parseScalar(raw: string): unknown {
   // Flow array: [ value, value ]
   if (commentFree.startsWith('[') && commentFree.endsWith(']')) {
     const inner = commentFree.slice(1, -1);
-    return inner.split(',').map((s) => parseScalar(s.trim()));
+    return splitFlowCommas(inner).map((s) => parseScalar(s.trim()));
   }
 
   // Boolean
