@@ -463,19 +463,25 @@ export function scaffoldScenarioYaml(arc: NarrativeArc, context: PRContext): str
   const fillPlaceholders = (s: string): string =>
     s.replace(/<[a-zA-Z][a-zA-Z0-9_-]*>/g, context.seededClient.id);
 
-  const description = fillPlaceholders(`${arc.persona.name}'s story: ${arc.payoff}`);
+  // YAML accepts JSON-style double-quoted scalars, so JSON.stringify gives
+  // us a correctly-escaped string for free: backslashes, quotes, newlines,
+  // and control characters are all handled. Hand-rolled `.replace(/"/g,…)`
+  // missed backslashes, which CodeQL flagged as incomplete string escaping.
+  const yamlString = (s: string): string => JSON.stringify(fillPlaceholders(s));
+
+  const description = `${arc.persona.name}'s story: ${arc.payoff}`;
 
   const lines: string[] = [];
   lines.push(`name: ${scenarioName}`);
-  lines.push(`title: "${title.replace(/"/g, '\\"')}"`);
-  lines.push(`description: "${description.replace(/"/g, '\\"')}"`);
+  lines.push(`title: ${yamlString(title)}`);
+  lines.push(`description: ${yamlString(description)}`);
   lines.push('');
   lines.push('narrative:');
-  lines.push(`  persona: "${arc.persona.name}, ${arc.persona.role}"`);
-  lines.push(`  setup: "${fillPlaceholders(arc.setup).replace(/"/g, '\\"')}"`);
-  lines.push(`  incitingMoment: "${fillPlaceholders(arc.incitingMoment).replace(/"/g, '\\"')}"`);
-  lines.push(`  payoff: "${fillPlaceholders(arc.payoff).replace(/"/g, '\\"')}"`);
-  lines.push(`  closing: "${fillPlaceholders(arc.closing).replace(/"/g, '\\"')}"`);
+  lines.push(`  persona: ${yamlString(`${arc.persona.name}, ${arc.persona.role}`)}`);
+  lines.push(`  setup: ${yamlString(arc.setup)}`);
+  lines.push(`  incitingMoment: ${yamlString(arc.incitingMoment)}`);
+  lines.push(`  payoff: ${yamlString(arc.payoff)}`);
+  lines.push(`  closing: ${yamlString(arc.closing)}`);
   lines.push('');
   lines.push('settings:');
   lines.push('  isolated: true');
@@ -483,9 +489,7 @@ export function scaffoldScenarioYaml(arc: NarrativeArc, context: PRContext): str
   lines.push('  sequences:');
   lines.push('    category: "PR Demo"');
   if (arc.highlights.length > 0) {
-    const entries = arc.highlights
-      .map((h) => `"${fillPlaceholders(h).replace(/"/g, '\\"')}"`)
-      .join(', ');
+    const entries = arc.highlights.map(yamlString).join(', ');
     lines.push(`    highlights: [${entries}]`);
   }
   lines.push('');
@@ -497,7 +501,7 @@ export function scaffoldScenarioYaml(arc: NarrativeArc, context: PRContext): str
     lines.push(`    path: ${fillPlaceholders(beat.surface)}`);
     lines.push(`    beat: ${beat.beat}`);
     if (beat.emphasis) lines.push('    emphasis: strong');
-    lines.push(`    annotation: "${fillPlaceholders(beat.rationale).replace(/"/g, '\\"')}"`);
+    lines.push(`    annotation: ${yamlString(beat.rationale)}`);
     lines.push(
       `    pacing: ${beat.beat === 'payoff' ? 'dramatic' : beat.beat === 'setup' ? 'slow' : 'normal'}`
     );
