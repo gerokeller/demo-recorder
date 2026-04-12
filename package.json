@@ -1,0 +1,59 @@
+{
+  "name": "demo-recorder",
+  "version": "0.1.0",
+  "description": "Record narrative-driven browser video demos with parallel desktop + mobile capture, voice-over, and beat-synced captions.",
+  "license": "MIT",
+  "author": "Gero Keller",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gerokeller/demo-recorder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gerokeller/demo-recorder/issues"
+  },
+  "homepage": "https://github.com/gerokeller/demo-recorder#readme",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "demo-recorder": "runner/record.ts",
+    "demo-story": "runner/story-director.ts",
+    "demo-cleanup": "runner/cleanup.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome format --write .",
+    "record": "tsx runner/record.ts",
+    "story": "tsx runner/story-director.ts",
+    "cleanup": "tsx runner/cleanup.ts"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.363",
+    "@remotion/google-fonts": "^4.0.363",
+    "@remotion/renderer": "^4.0.363",
+    "playwright": "^1.50.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "^4.0.363",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  },
+  "keywords": [
+    "demo",
+    "video",
+    "playwright",
+    "remotion",
+    "screen-recording",
+    "storytelling",
+    "tts",
+    "voice-over"
+  ]
+}

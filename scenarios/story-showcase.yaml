@@ -1,0 +1,82 @@
+name: story-showcase
+title: "Story Director Showcase"
+description: "Sarah checks in on her pipeline, finds a client needing attention, and sees exactly where to act next."
+
+narrative:
+  persona: "Sarah, Agency Account Manager"
+  setup: "Sarah juggles a dozen Shopify clients. Monday morning she opens the tool to see what needs her attention."
+  incitingMoment: "She spots a client in the list that needs a closer look."
+  payoff: "One click in and everything she needs is right there."
+  closing: "Before this change she'd jump between tools. Now the answer is inline."
+
+settings:
+  isolated: true
+  auth: ownerUser
+  viewport:
+    width: 1920
+    height: 1080
+  sequences:
+    category: "Feature Demo"
+    orgName: "27 Street"
+    highlights: ["Dashboard surfaces what matters at a glance", "Client list scales to a dozen accounts", "Detail view is one click away"]
+  mobile:
+    enabled: true
+    layout: side-by-side
+
+steps:
+  # SETUP: Sarah arrives and orients herself.
+  - action: navigate
+    path: /dashboard
+    waitFor: "heading:Dashboard"
+    beat: setup
+    annotation: "Monday morning. Sarah opens the dashboard."
+    pacing: slow
+
+  - action: pause
+    duration: 1200
+    beat: setup
+
+  - action: highlight
+    selector: "heading:Dashboard"
+    duration: 1800
+    beat: setup
+    annotation: "The dashboard is her home base for every client."
+
+  # ACTION: She navigates to the client list.
+  - action: navigate
+    path: /clients
+    waitFor: "heading:Clients"
+    beat: action
+    annotation: "Next: the client list. Who needs her attention today?"
+
+  - action: pause
+    duration: 1000
+    beat: action
+
+  - action: scroll
+    direction: down
+    amount: 300
+    beat: action
+    annotation: "A quick scroll through the accounts she manages."
+    pacing: quick
+
+  # PAYOFF: The moment where the change pays off.
+  - action: highlight
+    selector: "heading:Clients"
+    duration: 2500
+    beat: payoff
+    emphasis: strong
+    pacing: dramatic
+    annotation: "Everything Sarah needs lives in one scannable list. No tool-switching."
+
+  - action: pause
+    duration: 1500
+    beat: payoff
+
+  # CLOSE: Recap.
+  - action: navigate
+    path: /dashboard
+    waitFor: "heading:Dashboard"
+    beat: close
+    annotation: "Back to the dashboard. Sarah knows exactly what to work on next."
+    pacing: slow

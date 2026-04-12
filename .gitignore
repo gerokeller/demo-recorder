@@ -1,0 +1,18 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+.env
+.env.local
+
+# Recorded videos and TTS caches
+output/*.mp4
+output/*.webm
+output/*.png
+output/.tts/
+output/.tmp-video/
+
+# Local IDE + OS
+.idea/
+.vscode/
+*.swp

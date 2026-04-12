@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "strict": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "jsx": "react-jsx",
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  "include": ["runner/**/*.ts", "runner/**/*.tsx"],
+  "exclude": ["node_modules"]
+}
