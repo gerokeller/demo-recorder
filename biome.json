@@ -2,7 +2,15 @@
   "$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!**/node_modules/**", "!**/output/**", "!**/.tts/**"]
+    "includes": [
+      "**",
+      "!**/node_modules",
+      "!**/output",
+      "!**/.tts",
+      "!**/coverage",
+      "!**/dist",
+      "!**/package-lock.json"
+    ]
   },
   "formatter": {
     "enabled": true,

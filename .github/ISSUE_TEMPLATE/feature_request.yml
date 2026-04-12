@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest a new capability or improvement.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: |
+        Describe the user pain. Examples: "Mobile demos drift from desktop on
+        long steps", "TTS cache grows unbounded", "POM path resolution fails
+        when …".
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What would you like demo-recorder to do? Paste YAML, CLI flags, or diagrams if useful.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches you thought about and why they fall short.
+    validations:
+      required: false

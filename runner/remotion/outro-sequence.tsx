@@ -289,7 +289,7 @@ export function OutroSequence({
               </div>
               {highlights.map((h, i) => (
                 <div
-                  key={i}
+                  key={h}
                   style={{
                     fontFamily: FONTS.body,
                     fontSize: 16,

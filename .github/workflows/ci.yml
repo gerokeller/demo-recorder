@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+
+      # Workaround for npm's optional-dependency lockfile bug
+      # (https://github.com/npm/cli/issues/4828): platform-specific binaries
+      # of Biome, rolldown, swc, etc. whose lockfile entries were written on
+      # a different OS will fail to install here. The error message from npm
+      # itself recommends removing package-lock.json and node_modules before
+      # reinstalling, which is what we do.
+      - name: Install dependencies (platform-agnostic)
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --no-audit --no-fund
+
+      - name: Biome check
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test:coverage
+
+      - name: Upload coverage (Linux only)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  npm-audit:
+    name: npm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install dependencies (platform-agnostic)
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --no-audit --no-fund
+      - run: npm audit --audit-level=high
