@@ -98,7 +98,11 @@ export function detectProvider(): TtsProviderName | null {
 // ---------------------------------------------------------------------------
 
 function hashText(text: string, salt = ''): string {
-  return crypto.createHash('sha256').update(salt + '|' + text).digest('hex').slice(0, 12);
+  return crypto
+    .createHash('sha256')
+    .update(salt + '|' + text)
+    .digest('hex')
+    .slice(0, 12);
 }
 
 /** Probe an audio file's duration in seconds using ffprobe. */
@@ -166,11 +170,10 @@ async function generatePiper(text: string, outPath: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 async function generateGoogle(text: string, outPath: string, voice: string): Promise<void> {
-  const token = execFileSync(
-    'gcloud',
-    ['auth', 'application-default', 'print-access-token'],
-    { encoding: 'utf-8', timeout: 10_000 }
-  ).trim();
+  const token = execFileSync('gcloud', ['auth', 'application-default', 'print-access-token'], {
+    encoding: 'utf-8',
+    timeout: 10_000,
+  }).trim();
 
   // Default to a Neural2 voice for good quality + low cost; the caller can
   // override via the voice option.

@@ -90,15 +90,10 @@ export function CaptionBar({
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-  const fadeOut = interpolate(
-    timeInStepMs,
-    [stepDurationMs - fadeOutMs, stepDurationMs],
-    [1, 0],
-    {
-      extrapolateLeft: 'clamp',
-      extrapolateRight: 'clamp',
-    }
-  );
+  const fadeOut = interpolate(timeInStepMs, [stepDurationMs - fadeOutMs, stepDurationMs], [1, 0], {
+    extrapolateLeft: 'clamp',
+    extrapolateRight: 'clamp',
+  });
   const opacity = annotation ? fadeIn * fadeOut : 0;
 
   // Progress: overall scenario progression, not per-step.

@@ -456,7 +456,14 @@ export function formatArcForHuman(arc: NarrativeArc, context: PRContext): string
 export function scaffoldScenarioYaml(arc: NarrativeArc, context: PRContext): string {
   const scenarioName = context.prNumber ? `pr-${context.prNumber}-demo` : 'demo-scenario';
   const title = context.title ?? 'Feature Demo';
-  const description = `${arc.persona.name}'s story: ${arc.payoff}`;
+  // Substitute route-placeholder tokens (`<id>`, `<clientId>`, ...) with the
+  // seeded client id everywhere in the output — narrative text, step paths,
+  // and annotations — so a scaffold YAML is ready to run without manual
+  // editing of placeholder tokens.
+  const fillPlaceholders = (s: string): string =>
+    s.replace(/<[a-zA-Z][a-zA-Z0-9_-]*>/g, context.seededClient.id);
+
+  const description = fillPlaceholders(`${arc.persona.name}'s story: ${arc.payoff}`);
 
   const lines: string[] = [];
   lines.push(`name: ${scenarioName}`);
@@ -465,19 +472,20 @@ export function scaffoldScenarioYaml(arc: NarrativeArc, context: PRContext): str
   lines.push('');
   lines.push('narrative:');
   lines.push(`  persona: "${arc.persona.name}, ${arc.persona.role}"`);
-  lines.push(`  setup: "${arc.setup.replace(/"/g, '\\"')}"`);
-  lines.push(`  incitingMoment: "${arc.incitingMoment.replace(/"/g, '\\"')}"`);
-  lines.push(`  payoff: "${arc.payoff.replace(/"/g, '\\"')}"`);
-  lines.push(`  closing: "${arc.closing.replace(/"/g, '\\"')}"`);
+  lines.push(`  setup: "${fillPlaceholders(arc.setup).replace(/"/g, '\\"')}"`);
+  lines.push(`  incitingMoment: "${fillPlaceholders(arc.incitingMoment).replace(/"/g, '\\"')}"`);
+  lines.push(`  payoff: "${fillPlaceholders(arc.payoff).replace(/"/g, '\\"')}"`);
+  lines.push(`  closing: "${fillPlaceholders(arc.closing).replace(/"/g, '\\"')}"`);
   lines.push('');
   lines.push('settings:');
   lines.push('  isolated: true');
   lines.push('  auth: ownerUser');
   lines.push('  sequences:');
   lines.push('    category: "PR Demo"');
-  lines.push('    orgName: "27 Street"');
   if (arc.highlights.length > 0) {
-    const entries = arc.highlights.map((h) => `"${h.replace(/"/g, '\\"')}"`).join(', ');
+    const entries = arc.highlights
+      .map((h) => `"${fillPlaceholders(h).replace(/"/g, '\\"')}"`)
+      .join(', ');
     lines.push(`    highlights: [${entries}]`);
   }
   lines.push('');
@@ -485,12 +493,11 @@ export function scaffoldScenarioYaml(arc: NarrativeArc, context: PRContext): str
 
   for (const beat of arc.action) {
     lines.push(`  # ${beat.beat.toUpperCase()}: ${beat.title}`);
-    const surfacePath = beat.surface.replace(/<id>/g, context.seededClient.id);
     lines.push('  - action: navigate');
-    lines.push(`    path: ${surfacePath}`);
+    lines.push(`    path: ${fillPlaceholders(beat.surface)}`);
     lines.push(`    beat: ${beat.beat}`);
     if (beat.emphasis) lines.push('    emphasis: strong');
-    lines.push(`    annotation: "${beat.rationale.replace(/"/g, '\\"')}"`);
+    lines.push(`    annotation: "${fillPlaceholders(beat.rationale).replace(/"/g, '\\"')}"`);
     lines.push(
       `    pacing: ${beat.beat === 'payoff' ? 'dramatic' : beat.beat === 'setup' ? 'slow' : 'normal'}`
     );

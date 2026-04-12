@@ -19,15 +19,23 @@
   "bin": {
     "demo-recorder": "runner/record.ts",
     "demo-story": "runner/story-director.ts",
-    "demo-cleanup": "runner/cleanup.ts"
+    "demo-cleanup": "runner/cleanup.ts",
+    "demo-doctor": "runner/doctor.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
+    "lint:fix": "biome check --write .",
     "format": "biome format --write .",
+    "format:check": "biome format .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "record": "tsx runner/record.ts",
     "story": "tsx runner/story-director.ts",
-    "cleanup": "tsx runner/cleanup.ts"
+    "cleanup": "tsx runner/cleanup.ts",
+    "doctor": "tsx runner/doctor.ts",
+    "check": "npm run typecheck && npm run lint && npm run test"
   },
   "dependencies": {
     "@remotion/bundler": "^4.0.363",
@@ -43,8 +51,10 @@
     "@biomejs/biome": "^2.0.0",
     "@types/node": "^25.6.0",
     "@types/react": "^19.0.0",
+    "@vitest/coverage-v8": "^4.1.4",
     "tsx": "^4.19.0",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.4"
   },
   "keywords": [
     "demo",

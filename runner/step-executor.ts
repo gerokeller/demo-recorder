@@ -500,7 +500,9 @@ async function showClickIndicator(
       const rippleSize = isMobile ? 110 : 80;
       const rippleColor = isMobile ? '#60a5fa' : '#3b82f6';
       const rippleWidth = isMobile ? 4 : 3;
-      const rippleAnim = isMobile ? 'demo-tap-ring 0.7s ease-out forwards' : 'demo-ripple 0.65s ease-out forwards';
+      const rippleAnim = isMobile
+        ? 'demo-tap-ring 0.7s ease-out forwards'
+        : 'demo-ripple 0.65s ease-out forwards';
 
       // Primary ring
       const ripple = document.createElement('div');
@@ -732,7 +734,7 @@ const WORDS_PER_SECOND = 3.2;
  * context. Short captions now get a higher effective reading speed so they
  * don't linger; beats enforce a floor so payoff moments land.
  */
-function computeAdaptiveHoldMs(text: string, step: Step, context: PacingContext): number {
+export function computeAdaptiveHoldMs(text: string, step: Step, context: PacingContext): number {
   const pacing: NonNullable<Pacing> = ('pacing' in step ? step.pacing : undefined) ?? 'normal';
   const beat = stepBeat(step);
 
@@ -898,7 +900,7 @@ export async function executeStep(
       const pomModulePath = process.env.DEMO_POM_MODULE;
       if (!pomModulePath) {
         throw new Error(
-          "pom action requires DEMO_POM_MODULE env var to point at a POM barrel module"
+          'pom action requires DEMO_POM_MODULE env var to point at a POM barrel module'
         );
       }
       const pagesModule = (await import(pomModulePath)) as Record<string, unknown>;

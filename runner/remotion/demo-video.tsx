@@ -124,7 +124,13 @@ export function DemoVideo(props: CompositionInput) {
           ) : null}
 
           {/* Caption bar: bottom strip */}
-          {hasCaptionData && barH > 0 && stepTimestamps && stepAnnotations && stepBeats && stepEmphases && stepActions ? (
+          {hasCaptionData &&
+          barH > 0 &&
+          stepTimestamps &&
+          stepAnnotations &&
+          stepBeats &&
+          stepEmphases &&
+          stepActions ? (
             <div
               style={{
                 position: 'absolute',

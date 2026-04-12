@@ -95,10 +95,7 @@ export function VideoWithFade({
         mobileAspect={mobileAspect}
         renderDesktop={({ width, height }) => (
           <div style={desktopInnerStyle(width, height)}>
-            <OffthreadVideo
-              src={staticFile(videoSrc)}
-              style={{ width: '100%', height: '100%' }}
-            />
+            <OffthreadVideo src={staticFile(videoSrc)} style={{ width: '100%', height: '100%' }} />
           </div>
         )}
         renderMobile={({ width, height }) => (

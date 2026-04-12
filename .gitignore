@@ -16,3 +16,6 @@ output/.tmp-video/
 .idea/
 .vscode/
 *.swp
+
+coverage/
+.vitest-cache/
