@@ -33,12 +33,16 @@ jobs:
           node-version: "22"
           cache: npm
 
-      # `npm install` (rather than `npm ci`) works around the well-known npm
-      # optional-dependency lockfile bug (https://github.com/npm/cli/issues/4828)
-      # where platform-specific binaries of Biome and rolldown are not resolved
-      # on runners whose OS differs from the one that wrote the lockfile.
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
+      # Workaround for npm's optional-dependency lockfile bug
+      # (https://github.com/npm/cli/issues/4828): platform-specific binaries
+      # of Biome, rolldown, swc, etc. whose lockfile entries were written on
+      # a different OS will fail to install here. The error message from npm
+      # itself recommends removing package-lock.json and node_modules before
+      # reinstalling, which is what we do.
+      - name: Install dependencies (platform-agnostic)
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --no-audit --no-fund
 
       - name: Biome check
         run: npm run lint
@@ -73,5 +77,8 @@ jobs:
         with:
           node-version: "22"
           cache: npm
-      - run: npm install --no-audit --no-fund
+      - name: Install dependencies (platform-agnostic)
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install --no-audit --no-fund
       - run: npm audit --audit-level=high
