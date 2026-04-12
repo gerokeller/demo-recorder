@@ -44,6 +44,42 @@ export interface ActionBeat {
   beat: 'setup' | 'action' | 'payoff' | 'close';
   /** If true, the scenario should mark this step `emphasis: strong`. */
   emphasis?: boolean;
+  /**
+   * When 'data-creation', the scaffold expands this beat into a multi-step
+   * create sequence (navigate → type fields → click submit) instead of a
+   * single navigate. Otherwise the beat renders as a plain navigate.
+   */
+  sequence?: 'data-creation' | 'interaction';
+  /** Create-flow descriptor. Required when `sequence` is 'data-creation'. */
+  dataFlow?: DataFlow;
+}
+
+/**
+ * A curated create-flow the director knows how to weave into the narrative
+ * when the PR diff touches it. Populated from the DATA_FLOWS table below;
+ * not inferred from the diff. Keeping the table hand-written makes the
+ * output deterministic and unit-testable, and the set of flows small
+ * enough to audit in one sitting.
+ */
+export interface DataFlow {
+  /** Short verb phrase used in narration ("creates a new client"). */
+  label: string;
+  /** Route to navigate to for the create form. Placeholders allowed. */
+  route: string;
+  /**
+   * Patterns matched against the PR's changedFiles and routes. When any
+   * pattern matches, the flow is considered triggered by this PR.
+   */
+  triggerPatterns: RegExp[];
+  /** Fields filled on the create form, in visual order. */
+  fields: Array<{ selector: string; value: string; annotation?: string }>;
+  /** Selector for the submit control. */
+  submitSelector: string;
+  /**
+   * Optional route navigated to after submit so the viewer sees the new
+   * record land on the observable surface. Placeholders allowed.
+   */
+  postCreateSurface?: string;
 }
 
 export interface NarrativeArc {
@@ -82,6 +118,87 @@ const SEEDED_CLIENTS = {
   nordicCrafts: { id: 'c0000000-0000-4000-8000-000000000004', name: 'Nordic Crafts' },
   alpineSports: { id: 'c0000000-0000-4000-8000-000000000005', name: 'Alpine Sports' },
 } as const;
+
+// ---------------------------------------------------------------------------
+// Curated data-creation flows
+// ---------------------------------------------------------------------------
+
+/**
+ * Hand-maintained table of create-flows the director can weave into the
+ * narrative. Kept intentionally small so demos stay deterministic and the
+ * set of flows is reviewable in one sitting. Add a new entry when a PR
+ * repeatedly benefits from narrating data creation rather than relying on
+ * seeded data.
+ */
+const DATA_FLOWS: Record<string, DataFlow> = {
+  // Triggers are intentionally narrow (create-form paths or explicit
+  // `*-edit-drawer`/`*-form` components) so they only fire when the PR is
+  // meaningfully touching a create surface. Broadening them to match any
+  // file under `partner-programs/` or `pipeline/` produced noisy results
+  // when validated against real CRT PRs (#1964 misfired newOpportunity on
+  // an unrelated API route change).
+  newClient: {
+    label: 'a new client',
+    route: '/clients/new',
+    triggerPatterns: [/web\/src\/app\/.*clients\/new\//, /client-(?:create|new)-form/],
+    fields: [
+      { selector: 'placeholder:Client name', value: 'Aurora Apparel' },
+      { selector: 'placeholder:Contact email', value: 'hello@aurora-apparel.test' },
+    ],
+    submitSelector: 'button:Create client',
+    postCreateSurface: '/clients',
+  },
+  newTask: {
+    label: 'a new task',
+    route: '/clients/<id>/scope',
+    triggerPatterns: [/web\/src\/app\/.*tasks\/new\//, /task-(?:edit-drawer|create-form|new-form)/],
+    fields: [{ selector: 'placeholder:Task title', value: 'Draft launch checklist' }],
+    submitSelector: 'button:Add task',
+    postCreateSurface: '/clients/<id>/scope',
+  },
+  newRunningCost: {
+    label: 'a new running cost',
+    route: '/clients/<id>/costs',
+    triggerPatterns: [
+      /web\/src\/app\/.*(?:running-)?costs?\/new\//,
+      /(?:running-)?cost-(?:edit-drawer|create-form|new-form)/,
+    ],
+    fields: [
+      { selector: 'placeholder:Cost name', value: 'Klaviyo' },
+      { selector: 'placeholder:Monthly amount', value: '150' },
+    ],
+    submitSelector: 'button:Add running cost',
+    postCreateSurface: '/clients/<id>/costs',
+  },
+  newPartnerProgram: {
+    label: 'a new partner program',
+    route: '/settings/partner-programs/new',
+    triggerPatterns: [
+      /web\/src\/app\/.*partner-programs?\/new\//,
+      /partner-program-(?:edit-drawer|create-form|new-form)/,
+    ],
+    fields: [
+      { selector: 'placeholder:Program name', value: 'Shopify Partners' },
+      { selector: 'placeholder:Detection keywords', value: 'shopify, shop, shopify-plus' },
+    ],
+    submitSelector: 'button:Create program',
+    postCreateSurface: '/settings/partner-programs',
+  },
+  newOpportunity: {
+    label: 'a new opportunity',
+    route: '/pipeline/new',
+    triggerPatterns: [
+      /web\/src\/app\/.*(?:pipeline|opportunit[a-z]*)\/new\//,
+      /opportunity-(?:edit-drawer|create-form|new-form)/,
+    ],
+    fields: [
+      { selector: 'placeholder:Opportunity name', value: 'Aurora retainer' },
+      { selector: 'placeholder:Estimated value', value: '12500' },
+    ],
+    submitSelector: 'button:Create opportunity',
+    postCreateSurface: '/pipeline',
+  },
+};
 
 // ---------------------------------------------------------------------------
 // Persona selection
@@ -262,6 +379,122 @@ function selectSeededClient(primaryArea: string): { id: string; name: string } {
 }
 
 // ---------------------------------------------------------------------------
+// Backend-only detection and data-as-story planning
+// ---------------------------------------------------------------------------
+
+function isFrontendFile(file: string): boolean {
+  // `web/src/app/api/` is server-only (API route handlers); don't count it
+  // as frontend or a PR touching only API handlers would be misclassified.
+  if (file.startsWith('web/src/app/api/')) return false;
+  return (
+    file.startsWith('web/src/components/') ||
+    file.startsWith('web/src/app/') ||
+    file.startsWith('web/src/hooks/')
+  );
+}
+
+/**
+ * Returns true when the PR touches no routes and no frontend files, so the
+ * scenario needs a synthetic "manifestation surface" to demo against.
+ */
+export function isBackendOnly(context: PRContext): boolean {
+  if (context.routes.length > 0) return false;
+  return !context.changedFiles.some(isFrontendFile);
+}
+
+/**
+ * Pick a user-facing surface where a backend-only change becomes visible.
+ * Ordered rules; first match wins. Falls back to the dashboard so the arc
+ * always has something to film.
+ */
+export function manifestationSurface(context: PRContext): string {
+  const files = context.changedFiles;
+  if (files.some((f) => /partner/i.test(f))) return '/clients/<id>/financials';
+  if (files.some((f) => /running[_-]?cost/i.test(f))) return '/clients/<id>/financials';
+  if (files.some((f) => /opportunit/i.test(f) || /pipeline/i.test(f))) return '/pipeline';
+  if (files.some((f) => /commission/i.test(f))) return '/dashboard';
+  if (files.some((f) => /task/i.test(f))) return '/clients/<id>/scope';
+  return '/dashboard';
+}
+
+/**
+ * Inspect the PR context against the curated DATA_FLOWS table and produce
+ * at most one data-creation beat. Capped at one so recordings stay short.
+ */
+export function planDataBeats(context: PRContext, persona: Persona): ActionBeat[] {
+  const haystack = [...context.changedFiles, ...context.routes];
+  for (const flow of Object.values(DATA_FLOWS)) {
+    const match = flow.triggerPatterns.some((pattern) =>
+      haystack.some((candidate) => pattern.test(candidate))
+    );
+    if (!match) continue;
+    return [
+      {
+        title: `Create ${flow.label}`,
+        rationale: `${persona.name} creates ${flow.label} so the demo runs on real data, not stubs.`,
+        surface: flow.route,
+        beat: 'action',
+        sequence: 'data-creation',
+        dataFlow: flow,
+      },
+    ];
+  }
+  return [];
+}
+
+// ---------------------------------------------------------------------------
+// Annotation voice rewriting
+// ---------------------------------------------------------------------------
+
+function truncateToSentence(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const firstSentence = text.split(/(?<=[.!?])\s+/)[0];
+  return firstSentence.length <= max ? firstSentence : `${text.slice(0, max - 3)}...`;
+}
+
+/**
+ * Rewrite a raw rationale (often a verbatim test-plan item) in persona
+ * voice with cause/effect framing. Deterministic and template-based by
+ * design so the output is unit-testable and drift-free.
+ */
+export function rewriteRationale(
+  raw: string,
+  persona: Persona,
+  beat: 'setup' | 'action' | 'payoff' | 'close'
+): string {
+  const text = raw.trim();
+  if (!text) return text;
+
+  // "after X, Y" reads as cause-and-effect; surface the cause explicitly.
+  const afterMatch = text.match(/^after\s+(.+?),\s+(.+)$/i);
+  if (afterMatch) {
+    return truncateToSentence(`Because ${afterMatch[1]}, ${afterMatch[2]}`, 140);
+  }
+
+  const stripped = text.replace(/^(navigate to|click (?:the |on )?|open|tap|select|press)\s+/i, '');
+  const didStrip = stripped !== text;
+  const body = didStrip ? stripped.charAt(0).toLowerCase() + stripped.slice(1) : stripped;
+  const lower = body.charAt(0).toLowerCase() + body.slice(1);
+
+  let result: string;
+  switch (beat) {
+    case 'setup':
+      result = didStrip ? `${persona.name} opens ${body}` : `${persona.name} sees ${lower}`;
+      break;
+    case 'payoff':
+      result = `Now ${persona.name} sees ${lower}`;
+      break;
+    case 'close':
+      result = `${persona.name} leaves knowing ${lower}`;
+      break;
+    default:
+      result = didStrip ? `${persona.name} ${body}` : body;
+      break;
+  }
+  return truncateToSentence(result, 140);
+}
+
+// ---------------------------------------------------------------------------
 // Narrative synthesis
 // ---------------------------------------------------------------------------
 
@@ -271,9 +504,9 @@ function selectSeededClient(primaryArea: string): { id: string; name: string } {
  * beats from route transitions instead so the arc always has at least a
  * setup, action, and payoff.
  */
-function beatsFromTestPlan(items: string[], routes: string[]): ActionBeat[] {
+function beatsFromTestPlan(items: string[], routes: string[], persona: Persona): ActionBeat[] {
   if (items.length === 0) {
-    return beatsFromRoutes(routes);
+    return beatsFromRoutes(routes, persona);
   }
 
   const beats: ActionBeat[] = [];
@@ -288,7 +521,7 @@ function beatsFromTestPlan(items: string[], routes: string[]): ActionBeat[] {
 
     beats.push({
       title: item.length > 60 ? `${item.slice(0, 57)}...` : item,
-      rationale: item,
+      rationale: rewriteRationale(item, persona, beat),
       surface: routes[0] ?? '/dashboard',
       beat,
       emphasis: beat === 'payoff',
@@ -297,7 +530,11 @@ function beatsFromTestPlan(items: string[], routes: string[]): ActionBeat[] {
 
   beats.push({
     title: 'Recap the value',
-    rationale: 'Return to the surface that proves the change delivered what the PR promised.',
+    rationale: rewriteRationale(
+      'Return to the surface that proves the change delivered what the PR promised.',
+      persona,
+      'close'
+    ),
     surface: routes[0] ?? '/dashboard',
     beat: 'close',
   });
@@ -305,31 +542,36 @@ function beatsFromTestPlan(items: string[], routes: string[]): ActionBeat[] {
   return beats;
 }
 
-function beatsFromRoutes(routes: string[]): ActionBeat[] {
+function beatsFromRoutes(routes: string[], persona: Persona): ActionBeat[] {
   const primary = routes[0] ?? '/dashboard';
+  const rewrite = (raw: string, beat: 'setup' | 'action' | 'payoff' | 'close') =>
+    rewriteRationale(raw, persona, beat);
   return [
     {
       title: 'Arrive at the affected surface',
-      rationale: 'Establish the page in its current state so the change is visible by contrast.',
+      rationale: rewrite(
+        'Establish the page in its current state so the change is visible by contrast.',
+        'setup'
+      ),
       surface: primary,
       beat: 'setup',
     },
     {
       title: 'Trigger the changed behavior',
-      rationale: 'Interact with the new or modified UI element.',
+      rationale: rewrite('Interact with the new or modified UI element.', 'action'),
       surface: primary,
       beat: 'action',
     },
     {
       title: 'Show the result',
-      rationale: 'Highlight the post-change state.',
+      rationale: rewrite('Highlight the post-change state.', 'payoff'),
       surface: primary,
       beat: 'payoff',
       emphasis: true,
     },
     {
       title: 'Recap the value',
-      rationale: 'Zoom out to the takeaway.',
+      rationale: rewrite('Zoom out to the takeaway.', 'close'),
       surface: primary,
       beat: 'close',
     },
@@ -342,7 +584,24 @@ function articleFor(word: string): 'a' | 'an' {
 
 function synthesizeArc(context: PRContext): NarrativeArc {
   const persona = selectPersona(context.primaryArea);
-  const action = beatsFromTestPlan(context.testPlanItems, context.routes);
+
+  // Backend-only PRs have no routes to demo against; pick a synthetic
+  // surface that shows where the change manifests so the scaffold still
+  // lands on a real page instead of producing an empty navigate.
+  const effectiveRoutes =
+    context.routes.length === 0 && isBackendOnly(context)
+      ? [manifestationSurface(context)]
+      : context.routes;
+
+  const action = beatsFromTestPlan(context.testPlanItems, effectiveRoutes, persona);
+
+  // Splice a data-creation beat in after the setup beat (position 1) when
+  // the diff matches one of the curated create flows. Capped at one beat.
+  const dataBeats = planDataBeats(context, persona);
+  if (dataBeats.length > 0) {
+    const insertAt = action.length > 0 && action[0].beat === 'setup' ? 1 : 0;
+    action.splice(insertAt, 0, ...dataBeats);
+  }
 
   const featureTitle = context.title ?? 'this change';
   const roleLower = persona.role.toLowerCase();
@@ -497,6 +756,46 @@ export function scaffoldScenarioYaml(arc: NarrativeArc, context: PRContext): str
 
   for (const beat of arc.action) {
     lines.push(`  # ${beat.beat.toUpperCase()}: ${beat.title}`);
+
+    if (beat.sequence === 'data-creation' && beat.dataFlow) {
+      // Expand the create flow into navigate → type (per field) → click.
+      // Each step carries the same beat tag so transition chips don't flicker.
+      const flow = beat.dataFlow;
+      lines.push('  - action: navigate');
+      lines.push(`    path: ${fillPlaceholders(flow.route)}`);
+      lines.push(`    beat: ${beat.beat}`);
+      lines.push(`    annotation: ${yamlString(beat.rationale)}`);
+      lines.push('    pacing: quick');
+      lines.push('');
+
+      for (const field of flow.fields) {
+        lines.push('  - action: type');
+        lines.push(`    selector: ${yamlString(field.selector)}`);
+        lines.push(`    text: ${yamlString(field.value)}`);
+        lines.push(`    beat: ${beat.beat}`);
+        if (field.annotation) {
+          lines.push(`    annotation: ${yamlString(field.annotation)}`);
+        }
+        lines.push('    pacing: normal');
+        lines.push('');
+      }
+
+      lines.push('  - action: click');
+      lines.push(`    selector: ${yamlString(flow.submitSelector)}`);
+      lines.push(`    beat: ${beat.beat}`);
+      lines.push('    pacing: normal');
+      lines.push('');
+
+      if (flow.postCreateSurface) {
+        lines.push('  - action: navigate');
+        lines.push(`    path: ${fillPlaceholders(flow.postCreateSurface)}`);
+        lines.push(`    beat: ${beat.beat}`);
+        lines.push('    pacing: slow');
+        lines.push('');
+      }
+      continue;
+    }
+
     lines.push('  - action: navigate');
     lines.push(`    path: ${fillPlaceholders(beat.surface)}`);
     lines.push(`    beat: ${beat.beat}`);

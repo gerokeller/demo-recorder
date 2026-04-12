@@ -66,6 +66,10 @@ Every PR demo recording runs in **isolated mode** by default, is **driven by the
    - The final non-close section is the **payoff beat**: mark its primary step `emphasis: strong` and `pacing: dramatic`, then a second `highlight` step on the key element. The annotation here should contrast before/after.
    - The close beat recaps value. Use `pacing: slow` and a `highlight` of the outcome.
 
+   **Data-as-story beats:** if the diff touches a known create flow (new client, new task, new running cost, new partner program, new opportunity), the director inserts a `sequence: data-creation` beat right after the setup. The scaffold expands this into a navigate → type-per-field → click-submit sequence so the demo *creates* the record on-camera instead of relying on seeds. Keep those steps or replace the selectors/values with ones you read out of the changed component — the curated flow list lives in `DATA_FLOWS` inside `runner/story-director.ts`. Add a new entry there if a future PR would benefit from narrating a different create flow.
+
+   **Backend-only PRs:** when the diff has no routes and no frontend files, the director picks a "manifestation surface" (e.g., partner-detection changes → `/clients/<id>/financials`) so the arc lands on a real page. Use the suggested surface; if it's wrong for the PR, override the first step's `path` and note why in the annotation.
+
    **Every step should have:**
    - A `beat` field (`setup | action | payoff | close`) so the recorder can render beat-transition chips.
    - An `annotation` that explains *why* the viewer should care, written in third person about the persona.

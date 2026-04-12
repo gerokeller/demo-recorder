@@ -38,6 +38,19 @@ describe('parseScalar', () => {
     expect(parseScalar('[one, two, three]')).toEqual(['one', 'two', 'three']);
   });
 
+  it('respects quotes when splitting flow arrays on commas', () => {
+    const raw = '["passing tests (hooks, drawer, table)", "verify flows on the page"]';
+    expect(parseScalar(raw)).toEqual([
+      'passing tests (hooks, drawer, table)',
+      'verify flows on the page',
+    ]);
+  });
+
+  it('respects quotes when splitting flow mappings on commas', () => {
+    const raw = '{ label: "one, two", value: 3 }';
+    expect(parseScalar(raw)).toEqual({ label: 'one, two', value: 3 });
+  });
+
   it('strips trailing inline comments', () => {
     expect(parseScalar('42   # the answer')).toBe(42);
   });
