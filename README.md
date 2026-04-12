@@ -1,5 +1,11 @@
 # demo-recorder
 
+[![CI](https://github.com/gerokeller/demo-recorder/actions/workflows/ci.yml/badge.svg)](https://github.com/gerokeller/demo-recorder/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](./LICENSE)
+[![Node.js 22+](https://img.shields.io/badge/node-22%2B-brightgreen)](https://nodejs.org)
+[![Playwright](https://img.shields.io/badge/Playwright-45ba4b?logo=playwright&logoColor=white)](https://playwright.dev)
+[![Remotion](https://img.shields.io/badge/Remotion-4.0-purple)](https://remotion.dev)
+
 Record narrative-driven browser video demos from YAML scenarios. Parallel desktop + mobile capture, beat-synced on-canvas captions, text-to-speech voice-over, and a Remotion-rendered intro/outro.
 
 Designed for product teams who want demos that tell a story rather than mechanical click-throughs.
