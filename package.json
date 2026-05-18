@@ -38,22 +38,22 @@
     "check": "npm run typecheck && npm run lint && npm run test"
   },
   "dependencies": {
-    "@remotion/bundler": "^4.0.363",
-    "@remotion/google-fonts": "^4.0.363",
+    "@remotion/bundler": "^4.0.462",
+    "@remotion/google-fonts": "^4.0.462",
     "@remotion/renderer": "^4.0.363",
-    "playwright": "^1.50.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "playwright": "^1.60.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "remotion": "^4.0.363",
-    "zod": "^4.0.0"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.0.0",
-    "@types/node": "^25.6.0",
+    "@biomejs/biome": "^2.4.15",
+    "@types/node": "^25.8.0",
     "@types/react": "^19.0.0",
-    "@vitest/coverage-v8": "^4.1.4",
-    "tsx": "^4.19.0",
-    "typescript": "^6.0.2",
+    "@vitest/coverage-v8": "^4.1.6",
+    "tsx": "^4.22.1",
+    "typescript": "^6.0.3",
     "vitest": "^4.1.4"
   },
   "optionalDependencies": {
